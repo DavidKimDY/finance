@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 from finance.data_reader import data_reader
 import finance.statistics.basic
+import os
 import pandas as pd
 import numpy as np
 
 stock_code_list = data_reader('12021', market='전체', search_type='전종목')['종목코드'].array
-stock_list = pd.read_csv('info_stock_list.csv')  # 종목코드, 종목명, 시장구분, 업종명, 시가총액
+dir = os.path.dirname(os.path.realpath(__file__))
+stock_list = pd.read_csv(dir + '/info_stock_list.csv')  # 종목코드, 종목명, 시장구분, 업종명, 시가총액
 
 
 def get(stock='all', start=None, end=None):
@@ -92,8 +94,8 @@ def pack(stock=None, start=past_days_ago, end=today):
     주어진 기간의 일자별 개별종목의 정보들을 합쳐 하나의 데이터프레임으로 가져온다.
 
     KRX 정보데이터시스템 통계 메뉴 중
-    - 합쳐진 개별종목 정보 -> [12003] 개별종목 시세 추이, [12021] PER/PBR/배당수익률(개별종목), [12023] 외국인보유량(개별종목)
-    - 향후 업데이트 예정 -> [12009] 투자자별 거래실적(개별종목), [31001] 개별종목 공매도 종합정보, [32001] 개별종목 공매도 거래
+    - 합쳐진 개별종목 정보 -> [12003] 개별종목 시세 추이, [12021] PER/PBR/배당수익률(개별종목), [12023] 외국인보유량(개별종목), [12009] 투자자별 거래실적(개별종목)
+    - 향후 업데이트 예정 -> , [31001] 개별종목 공매도 종합정보, [32001] 개별종목 공매도 거래
 
     Parameters
     ----------
@@ -119,23 +121,65 @@ def pack(stock=None, start=past_days_ago, end=today):
     # [12003] 개별종목 시세 추이
     df_12003 = data_reader('12003', item=item, item_code=item_code, start=start, end=end)
 
-    # [12009] 투자자별 거래실적(개별종목) -> 업데이트 예정 (가까운 미래)
-    # 거래량/거래대금 * 매도/매수/순매수 = 총 6개의 표가 있어 12009 내에서 표 합치기 우선 필요하며, 상세보기의 표를 어떻게 넣을지 고민..
-    # df_12009 = data_reader('12009', search_type='일별추이', item=stock, start=start, end=end)
-
     # [12021] PER/PBR/배당수익률(개별종목)
     df_12021 = data_reader('12021', search_type='개별추이', item=item, item_code=item_code, start=start, end=end)
 
     # [12023] 외국인보유량(개별종목)
     df_12023 = data_reader('12023', search_type='개별추이', item=item, item_code=item_code, start=start, end=end)
 
+    # [12009] 투자자별 거래실적(개별종목)
+    def get_df_12009(item=item, item_code=item_code, start=start, end=end):
+        """
+        거래량/거래대금 * 매도/매수/순매수 = 총 6개의 표의 상세보기 포함 정보를 하나의 DataFrame으로 합쳐서 반환
+
+        Parameters
+        ----------
+        item : str
+            pack() 함수의 parameter인 stock이 종목명일 때 종목명을 가져옴
+        item_code : str
+            pack() 함수의 parameter인 stock이 종목코드일 때 종목코드를 가져옴
+        start : str
+            pack() 함수의 parameter인 start 일자를 가져옴
+        end : str
+            pack() 함수의 parameter인 end 일자를 가져옴
+
+        Returns
+        -------
+        DataFrame
+            개별종목의 투자자별 거래실적 상세 항목을 모두 포함한 DataFrame 반환
+        """
+        trdvolval_list = ['거래량', '거래대금']  # trdVolVal {1: '거래량', 2: '거래대금'}
+        askbid_list = ['매도', '매수', '순매수']  # askBid {1: '매도', 2: '매수', 3: '순매수'}
+        dfs = []
+        for trdvolval in trdvolval_list:
+            for askbid in askbid_list:
+                df_temp = data_reader('12009', item=item, item_code=item_code, start=start, end=end,
+                                      search_type='일별추이', trade_index=trdvolval, trade_check=askbid, detail='상세보기')
+                df_temp.drop(['종목명'], axis='columns', inplace=True)  # 매 번 반복되는 종목명 column 제거
+                col_institutional_investor = ['금융투자', '보험', '투신', '사모', '은행', '기타금융', '연기금 등']
+                col_foreign_investor = ['외국인', '기타외국인']
+                df_temp['기관 합계'] = df_temp.loc[:, col_institutional_investor].sum(axis='columns')
+                df_temp['외국인 합계'] = df_temp.loc[:, col_foreign_investor].sum(axis='columns')
+                col_new = ['금융투자', '보험', '투신', '사모', '은행', '기타금융', '연기금 등', '기관 합계', '기타법인', '개인',
+                           '외국인', '기타외국인', '외국인 합계', '전체']
+                df_temp = df_temp[col_new]  # '기간 합계'와 '외국인 합계' 열 위치 조정
+                col_name = f'{trdvolval}-{askbid}'
+                df_temp.columns = pd.MultiIndex.from_product([[col_name], df_temp.columns])
+                dfs.append(df_temp)
+        df = pd.concat(dfs, axis='columns')
+        return df
+    df_12009 = get_df_12009(item=item)
+
     # [31001] 개별종목 공매도 종합정보, [32001] 개별종목 공매도 거래 -> 업데이트 예정 (아직 공매도 통계 미구현 -> 먼 미래)
 
     print('< 일자별 개별종목 종합정보 조회 >')
     print(f'종목명: {item} // 종목코드: {item_code} // 조회기간: {start}~{end}')
 
-    df = pd.concat([df_12003, df_12021, df_12023], axis=1)  # DataFrame을 Columns 기준으로 합침
-    df = df.loc[:, ~df.columns.duplicated()]  # 중복되는 Columns 제외
+    df = pd.concat([df_12003, df_12021, df_12023, df_12009], axis="columns")  # DataFrame을 Columns 기준으로 합침
+    df = (df
+          .loc[:, ~df.columns.duplicated()]  # 중복되는 Columns 제외
+          .sort_index(ascending=False)  # 최신 날짜가 위로 올라오도록 정렬
+          )
 
     return df
 
@@ -236,7 +280,7 @@ def info(kind='주식', *, outfile=False, sort='종목명', ascending=True):  # 
         # [12006] 전종목 지정내역
         df_12006 = data_reader('12006', division='전체').set_index('종목코드')  # concat을 위해 index를 종목코드로 맞춰줌
 
-        df = pd.concat([df_12025, df_12005, df_12006], axis=1)
+        df = pd.concat([df_12025, df_12005, df_12006], axis='columns')
         df = (df
               .loc[:, ~df.columns.duplicated()]  # 중복되는 Columns 제외
               .dropna()  # df_12025의 종목명을 기준으로 쓰면서 결측값이 돼버린 KONEX 종목 삭제
@@ -289,18 +333,14 @@ def get_stock(stock):
         종목명 입력 -> 종목코드 반환
     """
     def get_stock_name(stock_ticker):
-        idx = stock_list[stock_list['종목코드'] == stock_ticker].index.values[0]
-        stock_name = stock_list.종목명.iloc[idx]
+        stock_name = stock_list[stock_list['종목코드'] == stock_ticker]['종목명'].array[0]
         return stock_name
 
     def get_stock_ticker(stock_name):
-        idx = stock_list[stock_list['종목명'] == stock_name].index.values[0]
-        stock_ticker = stock_list.종목코드.iloc[idx]
+        stock_ticker = stock_list[stock_list['종목명'] == stock_name]['종목코드'].array[0]
         return stock_ticker
 
     if stock in stock_list['종목코드'].array:
         return get_stock_name(stock)
     elif stock in stock_list['종목명'].array:
         return get_stock_ticker(stock)
-
-print(pack('삼성전자'))
