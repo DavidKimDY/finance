@@ -62,7 +62,6 @@ def per(stock="all", start=None, end=None):
             return data_reader('12021', search_type='개별추이', item=stock, start=start, end=end)
 
 
-<<<<<<< HEAD
 def get_today_and_past_days_ago(days=14):
     """
     오늘 날짜와 오늘 날짜로부터 {days}일 전 날짜를 반환한다.
@@ -116,10 +115,10 @@ def pack(stock=None, start=past_days_ago, end=today):
     ----------
     stock : str
         종목번호(ticker) 또는 종목명
-    start : str, default : 오늘 날짜의 14일 전 날짜
-        데이터 검색 시작 일자를 str 형태로 입력 (예: '20210324')
-    end : str, default : 오늘 날짜
-        데이터 검색 끝 일자를 str 형태로 입력 (예: '20210407')
+    start : int or str, default : 오늘 날짜의 14일 전 날짜
+        데이터 검색 시작 일자 (예: 20210324)
+    end : int or str, default : 오늘 날짜
+        데이터 검색 끝 일자 (예: 20210407)
 
     Returns
     -------
@@ -261,7 +260,7 @@ def make_6digits_code(code):
     return f'{float(code):06.0f}'
 
 
-def info(kind='주식', *, outfile=False, sort='종목명', ascending=True):  # * 이후는 키워드만 사용 가능
+def info(kind='주식', *, sort='종목명', ascending=True, outfile=False):  # * 이후는 키워드만 사용 가능
     """
     주식 관련 종합 정보 조회 (KOSPI, KOSDAQ)
     KONEX는 제외
@@ -271,12 +270,12 @@ def info(kind='주식', *, outfile=False, sort='종목명', ascending=True):  # 
     kind : str, default = '주식'
         '주식' : 전체 주식 기본 정보 조회 (KOSPI, KODEX)
         '상장회사' : 상장회사 전체 조회 ('KOSPI, KOSDAQ, KONEX')
-    outfile : bool, default = False
-        True : DataFrame을 csv 파일로 저장
     sort : str, default = '종목명'
         정렬 기준 column명 지정
     ascending : bool, default = True (오름차순)
         정렬 기준 오름차순(True)/내림차순(False) 지정
+    outfile : bool, default = False
+        True : DataFrame을 csv 파일로 저장
 
     Returns
     -------
@@ -359,7 +358,8 @@ def get_stock(stock):
         return get_stock_name(stock)
     elif stock in stock_list['종목명'].array:
         return get_stock_ticker(stock)
-=======
+
+
 def etf(item="all", start=None, end=None):
     """
     Parameters
@@ -372,4 +372,4 @@ def etf(item="all", start=None, end=None):
     -------
 
     """
->>>>>>> e1584f7ca7a6d8b07e3d0c2bc6bb009b56f3ca40
+
