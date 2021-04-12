@@ -16,16 +16,34 @@ no_display_columns = ['IND_TP_CD', 'IDX_IND_CD', 'MKT_ID',
 
 
 class Data_nm:
-    data_nm = None
+    _data_nm = None
+    def __init__(self):
+        pass
+
+    @property
+    def data_nm(self):
+        item_name = Data_nm._data_nm
+        Data_nm._data_nm = None
+        return item_name
+
+    @data_nm.setter
+    def data_nm(self, item_name):
+        Data_nm._data_nm = item_name
 
 
 def to_dataframe(data_json, column_map):
+    data_validation(data_json)
     data = apply_column_map(data_json, column_map)
     data = date_to_index(data)
     data = multi_columnize(data)
     data = string_to_float(data)
     data = data_nm_column(data)
     return data
+
+
+def data_validation(data_json):
+    if len(list(data_json.values())[0]) == 0:
+        raise Exception("No data, Check parameters")
 
 
 def apply_column_map(data_json, column_map):
@@ -51,17 +69,27 @@ def apply_column_map(data_json, column_map):
 
 def multi_columnize(data):
     column_data = [column.split("//") for column in data.columns]
-    columns_length = max([len(c) for c in column_data])
-    if columns_length == 1:
+    columns_depth = max([len(c) for c in column_data])
+    # columns 가 single 인 경우
+    if columns_depth == 1:
         return data
     columns = []
-    for i in range(1, columns_length + 1):
+    # 같은 이름으로 multi columnize 되는 것을 방지
+    for i in column_data:
+        for _ in range(columns_depth - len(i)):
+            i.append('')
+    # column 만들기
+    for i in range(1, columns_depth + 1):
         layer = []
         for column in column_data:
             layer.append(column[:i][-1])
         columns.append(layer)
     data.columns = columns
     return data
+
+def remove_recursive_column_name(columns):
+    pass
+
 
 def string_to_float(data):
     new_values = []
@@ -101,9 +129,11 @@ def date_to_index(data):
 
 
 def data_nm_column(data):
-    if Data_nm.data_nm is None:
+    item_name = Data_nm().data_nm
+    if item_name is None:
         return data
-    data['종목명'] = [Data_nm.data_nm for _ in range(len(data))]
+    data['종목명'] = [item_name for _ in range(len(data))]
+
     return data
 
 

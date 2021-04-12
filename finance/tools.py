@@ -12,13 +12,18 @@ stock_list = pd.read_csv(dir + '/info_stock_list.csv')  # 종목코드, 종목�
 
 def get(stock='all', start=None, end=None):
     """
-    :param stock: 종목명 또는 종목코드, 기본값은 'all'
-        'all' 은 전종목 시세
-    :param start: 시작일 또는 조회일자
-        검색 시작일 또는 조회일자
-    :param end: 종료일
-        검색 종료일
-    :return: DataFrame or None
+    코스피(KOSPI), 코스닥(KOSDAQ), 코넥스(KONEX)에 상장되어 있는 종목들에 대한 가격 데이터를 반환한다.
+    Parameters
+    ----------
+    stock : string
+        종목명 또는 종목코드를 입력. default 값은 "all"이며 전종목 시세를 반환한다.
+    start : int, string
+        검색 시작일, default 값은 오늘로부터 60일 이전
+    end : int, string
+        검색 종료일, default 값은 오늘
+
+    Returns : DataFrame
+    -------
     """
     if stock == 'all':
         return data_reader('12001', market='전체', day=start)
@@ -29,18 +34,27 @@ def get(stock='all', start=None, end=None):
             return data_reader('12003', start=start, end=end, item=stock)
 
 
-def per(stock='all', start=None, end=None):
+def per(stock="all", start=None, end=None):
     """
-    :param stock: 종목명 또는 종목코드, 기본값은 'all'
-        'all' 은 전종목 검색
-    :param start: 시작일 또는 조회일자
-        검색 시작일
-    :param end: 종료일
-        검색 종료
-    :return: DataFrame or None
+    코스피(KOSPI), 코스닥(KOSDAQ), 코넥스(KONEX)에 상장되어 있는 종목들에 대한
+    PER/EPS/PBS/BPS/주당배당금/배당수익률 데이터를 반환한다.
+    Parameters
+    ----------
+    stock : string
+        종목명 또는 종목코드를 입력. default 값은 "all"이며 전종목 시세를 반환한다.
+    start : int, string
+        검색 시작일, default 값은 오늘로부터 60일 이전
+    end : int, string
+        검색 종료일, default 값은 오늘
+
+    Returns : DataFrame
+    -------
     """
     if stock == 'all':
-        return data_reader('12021', search_type='전종목', market='전체', day=start)
+        data = data_reader('12021', search_type='전종목', market='전체', day=start)
+        #  12021 종목명 데이터에 아래와 같은 문자열이 함께 출력됨.
+        data['종목명'] = [name.replace('<em class =\"up\"></em>', '') for name in data['종목명']]
+        return data
     else:
         if stock in stock_code_list:
             return data_reader('12021', search_type='개별추이', item_code=stock, start=start, end=end)
@@ -48,6 +62,7 @@ def per(stock='all', start=None, end=None):
             return data_reader('12021', search_type='개별추이', item=stock, start=start, end=end)
 
 
+<<<<<<< HEAD
 def get_today_and_past_days_ago(days=14):
     """
     오늘 날짜와 오늘 날짜로부터 {days}일 전 날짜를 반환한다.
@@ -344,3 +359,17 @@ def get_stock(stock):
         return get_stock_name(stock)
     elif stock in stock_list['종목명'].array:
         return get_stock_ticker(stock)
+=======
+def etf(item="all", start=None, end=None):
+    """
+    Parameters
+    ----------
+    item
+    start
+    end
+
+    Returns
+    -------
+
+    """
+>>>>>>> e1584f7ca7a6d8b07e3d0c2bc6bb009b56f3ca40
