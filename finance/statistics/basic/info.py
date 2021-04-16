@@ -24,14 +24,22 @@ class Info:
         }
         self.url = 'http://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd'
 
+        # proxy
+        self.proxies = {
+            'http': 'http://35.234.46.196:8080',
+            'https': 'http://176.9.63.62:3128'
+        }
+
     def requests_data(self, data):
         data['MIME Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
         data['csvxls_isNo'] = 'false'
 
+
+
         jsp_soup, mdcstat = self.get_jsp_soup(data)
         column_map = self.get_column_map(jsp_soup, mdcstat)
         modified_data = self.input_to_value(jsp_soup, data)
-        r = requests.post(self.url, data=modified_data, headers=self.headers)
+        r = requests.post(self.url, data=modified_data, headers=self.headers, proxies=self.proxies)
 
         data = json.loads(r.content)
 
@@ -54,7 +62,7 @@ class Info:
             'publish': 'http://data.krx.co.kr/comm/finder/autocomplete.jspx?contextName=finder_bndordisu&value={item}&viewCount=5&bldPath=%2Fdbms%2Fcomm%2Ffinder%2Ffinder_bndordisu_autocomplete',
             'bond': 'http://data.krx.co.kr/comm/finder/autocomplete.jspx?contextName=finder_bondisu&value={item}&viewCount=5&bldPath=%2Fdbms%2Fcomm%2Ffinder%2Ffinder_bondisu_autocomplete'
         }
-        response = requests.get(url_dict[item_type].format(item=item))
+        response = requests.get(url_dict[item_type].format(item=item), proxies=self.proxies)
         soup = bs(response.content, 'html.parser').li
 
         if soup is None:
@@ -87,7 +95,14 @@ class Info:
         mdcstat = bld.split('/')[-1]
         jsp_filename = mdcstat[:-2]
         url = f'http://data.krx.co.kr/contents/MDC/STAT/standard/{jsp_filename}.jsp'
-        html = requests.get(url)
+
+        #proxy
+        proxies = {
+            'http': 'http://62.23.15.92:6666',
+            'https': 'http://1.4.198.117:8080'
+        }
+
+        html = requests.get(url, proxies=proxies)
         jsp_soup = bs(html.content, 'html.parser')
         return jsp_soup, mdcstat
 
@@ -207,7 +222,7 @@ class Info:
                 key = e
         market = 'kospi'
         efrb_url = f'http://data.krx.co.kr/comm/bldAttendant/executeForResourceBundle.cmd?baseName={baseName}&key={key}&type={market}'
-        html = requests.get(efrb_url)
+        html = requests.get(efrb_url, proxies=self.proxies)
         soup = bs(html.content, 'html.parser')
         the = json.loads(str(soup))
         new = the['result']['output']
